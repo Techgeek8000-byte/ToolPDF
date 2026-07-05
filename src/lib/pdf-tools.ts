@@ -2,11 +2,7 @@ import { PDFDocument, rgb, degrees, StandardFonts } from 'pdf-lib';
 import { Document, Paragraph, TextRun, Packer } from 'docx';
 import mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
-
-// Set up pdfjs worker (client-side)
-if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
-}
+import { addPasswordProtection } from './pdf-encrypt';
 
 function readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
@@ -36,6 +32,13 @@ function simulateProgress(
       }
     }, interval);
   });
+}
+
+function ensurePdfJsWorker() {
+  if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+  }
 }
 
 export async function mergePDFs(
@@ -127,11 +130,12 @@ export async function pdfToImages(
   file: File,
   onProgress?: (p: number) => void
 ): Promise<Blob[]> {
+  ensurePdfJsWorker();
+
   const progressFn = onProgress || (() => {});
   const arrayBuffer = await readFileAsArrayBuffer(file);
   progressFn(10);
 
-  // Use pdfjs-dist for real PDF rendering
   const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const totalPages = pdfDoc.numPages;
   const results: Blob[] = [];
@@ -148,11 +152,9 @@ export async function pdfToImages(
     canvas.height = viewport.height;
     const ctx = canvas.getContext('2d')!;
 
-    // White background
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Render PDF page onto canvas
     await page.render({
       canvasContext: ctx,
       viewport,
@@ -200,22 +202,29 @@ export async function rotatePDF(
 
 export async function protectPDF(
   file: File,
-  _password: string,
+  password: string,
   onProgress?: (p: number) => void
 ): Promise<Blob> {
   const progressFn = onProgress || (() => {});
   progressFn(10);
 
-  const arrayBuffer = await readFileAsArrayBuffer(file);
-  progressFn(40);
+  if (!password || password.length < 1) {
+    throw new Error('Please enter a password (at least 1 character)');
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  progressFn(30);
 
   const pdf = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-  progressFn(70);
+  progressFn(60);
 
-  const pdfBytes = await pdf.save();
+  const cleanBytes = await pdf.save({ useObjectStreams: false });
+  progressFn(75);
+
+  const encryptedBytes = addPasswordProtection(new Uint8Array(cleanBytes), password);
   progressFn(100);
 
-  return new Blob([pdfBytes], { type: 'application/pdf' });
+  return new Blob([encryptedBytes], { type: 'application/pdf' });
 }
 
 export async function addWatermark(
@@ -294,13 +303,14 @@ export async function pdfToWord(
   file: File,
   onProgress?: (p: number) => void
 ): Promise<Blob> {
+  ensurePdfJsWorker();
+
   const progressFn = onProgress || (() => {});
   progressFn(10);
 
   const arrayBuffer = await readFileAsArrayBuffer(file);
   progressFn(25);
 
-  // Use pdfjs-dist for text extraction
   const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const totalPages = pdfDoc.numPages;
   progressFn(35);
@@ -311,7 +321,6 @@ export async function pdfToWord(
     const page = await pdfDoc.getPage(i);
     const textContent = await page.getTextContent();
 
-    // Page header
     if (textContent.items.length > 0) {
       children.push(
         new Paragraph({
@@ -328,17 +337,15 @@ export async function pdfToWord(
       );
     }
 
-    // Sort text items by y position (top to bottom) then x (left to right)
     const sortedItems = [...textContent.items]
       .filter((item): item is { str: string; transform: number[] } => 'str' in item)
       .sort((a, b) => {
         const ay = a.transform[5];
         const by = b.transform[5];
-        if (Math.abs(ay - by) > 2) return by - ay; // PDF y-axis is bottom-to-top
+        if (Math.abs(ay - by) > 2) return by - ay;
         return a.transform[4] - b.transform[4];
       });
 
-    // Group items into lines based on y proximity
     let currentLine = '';
     let lastY = Infinity;
     for (const item of sortedItems) {
@@ -377,7 +384,6 @@ export async function pdfToWord(
       );
     }
 
-    // Page break between pages (except last)
     if (i < totalPages) {
       children.push(
         new Paragraph({
@@ -394,11 +400,7 @@ export async function pdfToWord(
   progressFn(88);
 
   const doc = new Document({
-    sections: [
-      {
-        children,
-      },
-    ],
+    sections: [{ children }],
   });
 
   progressFn(92);
@@ -425,7 +427,7 @@ export async function wordToPdf(
   const fontSize = 11;
   const lineHeight = fontSize * 1.5;
   const margin = 50;
-  const pageWidth = 595.28; // A4
+  const pageWidth = 595.28;
   const pageHeight = 841.89;
   const maxWidth = pageWidth - margin * 2;
   const maxY = pageHeight - margin;
@@ -445,7 +447,6 @@ export async function wordToPdf(
       continue;
     }
 
-    // Word-wrap long lines
     const words = line.split(' ');
     let currentLine = '';
     for (const word of words) {
@@ -453,10 +454,7 @@ export async function wordToPdf(
       const textWidth = font.widthOfTextAtSize(testLine, fontSize);
       if (textWidth > maxWidth && currentLine) {
         currentPage.drawText(currentLine, {
-          x: margin,
-          y,
-          size: fontSize,
-          font,
+          x: margin, y, size: fontSize, font,
           color: rgb(0.1, 0.1, 0.1),
         });
         y -= lineHeight;
@@ -465,17 +463,13 @@ export async function wordToPdf(
         currentLine = testLine;
       }
     }
-    // Draw remaining text
     if (currentLine) {
       if (y < margin) {
         currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
         y = maxY;
       }
       currentPage.drawText(currentLine, {
-        x: margin,
-        y,
-        size: fontSize,
-        font,
+        x: margin, y, size: fontSize, font,
         color: rgb(0.1, 0.1, 0.1),
       });
       y -= lineHeight;
@@ -518,7 +512,6 @@ export async function imageToPdf(
       } else if (ext === 'jpg' || ext === 'jpeg') {
         image = await pdfDoc.embedJpg(uint8);
       } else {
-        // Try PNG first, then JPG
         try {
           image = await pdfDoc.embedPng(uint8);
         } catch {
@@ -532,7 +525,6 @@ export async function imageToPdf(
     const imgWidth = image.width;
     const imgHeight = image.height;
 
-    // Scale to fit A4 with margins
     const maxW = 595.28 - 80;
     const maxH = 841.89 - 80;
     const scale = Math.min(maxW / imgWidth, maxH / imgHeight, 1);

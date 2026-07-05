@@ -320,7 +320,7 @@ export default function ToolWorkspace() {
             </div>
           </div>
         );
-      case 'protect-pdf':
+       case 'protect-pdf':
         return (
           <div className="mt-4">
             <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -333,9 +333,21 @@ export default function ToolWorkspace() {
               placeholder="Enter password"
               className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500/50 transition-all"
             />
-            <p className="mt-2 text-xs text-amber-400/70">
-              Note: Client-side encryption is limited. For full password protection, our premium server-side solution is coming soon.
+            <p className="mt-2 text-xs text-emerald-400/70">
+              🔒 Your PDF will be password-protected. The file will require this password to open.
             </p>
+            {!isPremium && (
+              <p className="mt-1.5 text-xs text-violet-400/80">
+                💎 For stronger AES-256 encryption,{' '}
+                <button
+                  type="button"
+                  onClick={() => useAppStore.getState().setPremium(true)}
+                  className="underline underline-offset-2 hover:text-violet-300 transition-colors"
+                >
+                  upgrade to Pro
+                </button>
+              </p>
+            )}
           </div>
         );
       case 'watermark-pdf':
