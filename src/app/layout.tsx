@@ -41,8 +41,14 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         style={{ backgroundColor: '#0a0a0f', color: '#ffffff' }}
       >
-        {/* Google Analytics - Replace G-XXXXXXXXXX with your actual Measurement ID */}
-        {/* Get yours at: https://analytics.google.com → Admin → Create Property → Data Stream → Copy Measurement ID */}
+        {/* Google AdSense */}
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7878398091851771"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
+        {/* Google Analytics */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-CMV34ZVLE7"
           strategy="afterInteractive"
