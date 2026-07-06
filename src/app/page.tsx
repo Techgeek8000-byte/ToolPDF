@@ -1,5 +1,6 @@
 'use client';
 
+import CrossPromo from '@/components/CrossPromo';
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import BackgroundEffects from '@/components/toolpdf/BackgroundEffects';
@@ -78,7 +79,7 @@ export default function Home() {
             )}
           </AnimatePresence>
         </main>
-
+        <CrossPromo exclude="ToolPDF" />
         <Footer />
 
         {/* Ad Banner 4: Sticky Bottom (mobile only, non-premium) */}
