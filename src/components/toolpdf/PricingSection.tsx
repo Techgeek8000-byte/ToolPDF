@@ -1,131 +1,149 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Check, Sparkles, Zap, Shield, Crown } from 'lucide-react';
+import { Check, Sparkles, Zap, Crown, Star, Clock, Infinity } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 
 interface PricingSectionProps {
   onUpgradeClick?: () => void;
 }
 
+const plans = [
+  {
+    name: 'Free',
+    price: '$0',
+    period: '',
+    description: 'Get started with PDF tools',
+    badge: null,
+    features: ['10 files per day', 'All 10 tools', '100MB max file size', 'Standard processing', 'Watermark on output'],
+    cta: 'Current Plan',
+    highlighted: false,
+    icon: <Star className="w-5 h-5 text-purple-400" />,
+  },
+  {
+    name: 'Weekly',
+    price: '$1',
+    period: '/week',
+    description: 'Try Pro for a week',
+    badge: null,
+    features: ['Unlimited files', 'All 10 tools', '500MB max file size', 'Priority speed', 'No watermark', 'Batch processing'],
+    cta: 'Get Weekly',
+    highlighted: false,
+    icon: <Clock className="w-5 h-5 text-purple-400" />,
+  },
+  {
+    name: 'Monthly',
+    price: '$2',
+    period: '/mo',
+    originalPrice: '$4',
+    description: 'Most popular for regular users',
+    badge: 'SAVE 50%',
+    features: ['Unlimited files', 'All 10 tools', '500MB max file size', 'Priority speed', 'No watermark', 'Batch processing', 'Early access to new tools'],
+    cta: 'Get Monthly',
+    highlighted: true,
+    icon: <Zap className="w-5 h-5 text-purple-400" />,
+  },
+  {
+    name: 'Yearly',
+    price: '$12',
+    period: '/year',
+    originalPrice: '$24',
+    description: 'Best value for regular users',
+    badge: 'SAVE 50%',
+    features: ['Unlimited files', 'All 10 tools', '500MB max file size', 'Priority speed', 'No watermark', 'Batch processing', 'Early access to new tools', 'Priority support'],
+    cta: 'Get Yearly',
+    highlighted: false,
+    icon: <Infinity className="w-5 h-5 text-emerald-400" />,
+  },
+  {
+    name: 'Lifetime',
+    price: '$25',
+    period: 'one-time',
+    originalPrice: '$48',
+    description: 'Pay once, use forever',
+    badge: 'BEST VALUE',
+    features: ['Everything in Yearly', 'Lifetime access', 'No recurring payments', 'All future tools included', 'All future upgrades', 'Priority support forever'],
+    cta: 'Get Lifetime',
+    highlighted: false,
+    icon: <Crown className="w-5 h-5 text-amber-400" />,
+  },
+];
+
 export default function PricingSection({ onUpgradeClick }: PricingSectionProps) {
-  const { isPremium, setPremium } = useAppStore();
+  const { isPremium } = useAppStore();
 
   const handleUpgrade = () => {
-    if (onUpgradeClick) {
-      onUpgradeClick();
-    } else {
-      setPremium(true);
-    }
+    if (onUpgradeClick) onUpgradeClick();
   };
 
   return (
     <section className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-16">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-center mb-12"
-      >
-        <h2 className="text-2xl sm:text-3xl font-bold text-white">Simple Pricing</h2>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="text-center mb-12">
+        <h2 className="text-2xl sm:text-3xl font-bold text-white">Simple, <span className="text-purple-400">Transparent</span> Pricing</h2>
         <p className="mt-2 text-slate-400">Start free. Upgrade when you need more.</p>
       </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-        {/* Free Plan */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.5 }}
-          className="relative rounded-2xl border border-white/10 bg-white/[0.03] p-8"
-        >
-          {!isPremium && (
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-emerald-500/20 border border-emerald-500/30 px-4 py-1">
-              <span className="text-xs font-semibold text-emerald-400">Current Plan</span>
-            </div>
-          )}
-          <h3 className="text-xl font-bold text-white">Free</h3>
-          <div className="mt-4 flex items-baseline gap-1">
-            <span className="text-4xl font-extrabold text-white">$0</span>
-            <span className="text-slate-400">/forever</span>
-          </div>
-          <ul className="mt-6 space-y-3">
-            {[
-              '10 files per day',
-              '100MB max file size',
-              'All 10 tools',
-              'Standard processing speed',
-            ].map((feature) => (
-              <li key={feature} className="flex items-center gap-3 text-sm text-slate-300">
-                <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                {feature}
-              </li>
-            ))}
-          </ul>
-          {!isPremium && (
-            <div className="mt-8 text-center">
-              <span className="inline-block rounded-xl bg-white/5 border border-white/10 px-6 py-3 text-sm font-semibold text-slate-400 cursor-default">
-                Current Plan
-              </span>
-            </div>
-          )}
-        </motion.div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        {plans.map((plan, i) => (
+          <motion.div
+            key={plan.name}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: i * 0.06 }}
+            className={`relative rounded-2xl p-5 flex flex-col ${
+              plan.highlighted
+                ? 'border border-purple-500/30 bg-purple-500/[0.04]'
+                : 'border border-white/[0.06] bg-white/[0.02]'
+            }`}
+          >
+            {plan.highlighted && (
+              <>
+                <div className="absolute -inset-px bg-gradient-to-b from-purple-500/30 to-pink-500/30 rounded-2xl blur-sm -z-10" />
+                <div className="absolute -inset-1 bg-gradient-to-b from-purple-500/10 to-pink-500/10 rounded-3xl blur-lg -z-20" />
+              </>
+            )}
 
-        {/* Pro Plan */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="relative rounded-2xl p-8"
-          style={{
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: isPremium ? '1px solid rgba(139,92,246,0.4)' : '1px solid rgba(255,255,255,0.1)',
-          }}
-        >
-          {isPremium && (
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-violet-500/20 border border-violet-500/30 px-4 py-1">
-              <span className="text-xs font-semibold text-violet-400">Active Plan</span>
+            {plan.badge && (
+              <div className={`absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white rounded-full shadow-lg ${
+                plan.badge === 'BEST VALUE' ? 'bg-amber-500 shadow-amber-500/25' : 'bg-purple-500 shadow-purple-500/25'
+              }`}>
+                {plan.badge}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 mb-3 relative z-10">
+              {plan.icon}
+              <h3 className="text-sm font-semibold text-slate-200">{plan.name}</h3>
             </div>
-          )}
-          <div className="flex items-center gap-2">
-            <h3 className="text-xl font-bold text-white">Pro</h3>
-            <Crown className="h-5 w-5 text-violet-400" />
-          </div>
-          <div className="mt-4 flex items-baseline gap-1">
-            <span className="text-4xl font-extrabold text-gradient-violet">$5</span>
-            <span className="text-slate-400">/month</span>
-          </div>
-          <p className="mt-1 text-xs text-slate-500">or $120/lifetime — save 60%</p>
-          <ul className="mt-6 space-y-3">
-            {[
-              { text: 'Unlimited files per day', icon: Zap },
-              { text: '500MB max file size', icon: Shield },
-              { text: 'Batch processing', icon: Sparkles },
-              { text: 'Priority speed', icon: Zap },
-              { text: 'All 10 tools unlocked', icon: Crown },
-              { text: 'No advertisements', icon: Shield },
-            ].map((feature) => (
-              <li key={feature.text} className="flex items-center gap-3 text-sm text-slate-300">
-                <feature.icon className="h-4 w-4 text-violet-400 shrink-0" />
-                {feature.text}
-              </li>
-            ))}
-          </ul>
-          <div className="mt-8 text-center">
-            <button
-              onClick={handleUpgrade}
-              className={`inline-flex items-center gap-2 rounded-xl px-8 py-3 text-sm font-semibold transition-all hover:scale-105 active:scale-95 ${
-                isPremium
-                  ? 'bg-violet-500/10 border border-violet-500/30 text-violet-300 hover:bg-violet-500/20'
-                  : 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40'
-              }`}
-            >
-              <Sparkles className="h-4 w-4" />
-              {isPremium ? 'Manage Subscription' : 'Upgrade to Pro'}
-            </button>
-          </div>
-        </motion.div>
+
+            <div className="mb-1 relative z-10">
+              {plan.originalPrice && <span className="text-xs text-slate-600 line-through mr-1">{plan.originalPrice}</span>}
+              <span className="text-2xl font-extrabold text-slate-100">{plan.price}</span>
+              {plan.period && <span className="text-xs text-slate-500 ml-1">{plan.period}</span>}
+            </div>
+            <p className="text-[11px] text-slate-500 mb-4 relative z-10">{plan.description}</p>
+
+            <ul className="space-y-2 mb-6 flex-1 relative z-10">
+              {plan.features.map((f) => (
+                <li key={f} className="flex items-start gap-2 text-xs text-slate-300">
+                  <Check className="w-3 h-3 text-emerald-400 shrink-0 mt-0.5" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+
+            {plan.name === 'Free' ? (
+              <div className="w-full py-2 text-xs text-center text-slate-500 bg-white/[0.03] rounded-xl border border-white/[0.06] relative z-10">Current Plan</div>
+            ) : (
+              <button onClick={handleUpgrade} className={`w-full py-2 text-xs font-semibold text-white rounded-xl relative z-10 transition-opacity hover:opacity-90 ${
+                plan.highlighted ? 'bg-gradient-to-r from-violet-600 to-purple-600' : 'bg-white/[0.08] hover:bg-white/[0.12]'
+              }`}>{plan.cta}</button>
+            )}
+          </motion.div>
+        ))}
       </div>
+
+      <p className="text-center text-xs text-slate-600 mt-6">Secure checkout via LemonSqueezy</p>
     </section>
   );
 }
