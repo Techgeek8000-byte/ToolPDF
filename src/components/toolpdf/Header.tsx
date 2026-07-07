@@ -1,8 +1,15 @@
 'use client';
 
-import { FileText, Search, Sparkles, Crown } from 'lucide-react';
+import { FileText, Search, Sparkles, Crown, ExternalLink } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { motion } from 'framer-motion';
+
+const promoSites = [
+  { name: 'CalcHub', emoji: '🧮', href: 'https://calc-hub-ashy.vercel.app' },
+  { name: 'ConvertFlow', emoji: '🔄', href: 'https://convert-flow-beta.vercel.app' },
+  { name: 'SEOKit', emoji: '🔍', href: 'https://seo-kit-tau.vercel.app' },
+  { name: 'PixelForge AI', emoji: '🎨', href: 'https://pixelforge-ai-chi.vercel.app' },
+];
 
 interface HeaderProps {
   onUpgradeClick?: () => void;
@@ -107,6 +114,27 @@ export default function Header({ onUpgradeClick }: HeaderProps) {
               onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full rounded-lg bg-white/5 border border-white/10 pl-10 pr-4 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-emerald-500/50 transition-all"
             />
+          </div>
+        </div>
+      </div>
+
+      {/* Cross-promo strip */}
+      <div className="border-t border-white/[0.05] bg-white/[0.01]">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3 py-1.5 overflow-x-auto no-scrollbar">
+            <span className="text-[10px] uppercase tracking-wider text-white/25 shrink-0">Our Tools:</span>
+            {promoSites.map(site => (
+              <a
+                key={site.name}
+                href={site.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-white transition-colors shrink-0"
+              >
+                <span>{site.emoji}</span>
+                <span className="hidden sm:inline">{site.name}</span>
+              </a>
+            ))}
           </div>
         </div>
       </div>

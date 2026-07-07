@@ -1,7 +1,14 @@
 'use client';
 
-import { FileText, Shield, Lock } from 'lucide-react';
+import { FileText, Shield, Lock, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
+
+const promoSites = [
+  { name: 'CalcHub', emoji: '🧮', desc: 'Free calculators for math, finance, health & more.', href: 'https://calc-hub-ashy.vercel.app' },
+  { name: 'ConvertFlow', emoji: '🔄', desc: 'Free unit converters — length, weight, temperature.', href: 'https://convert-flow-beta.vercel.app' },
+  { name: 'SEOKit', emoji: '🔍', desc: 'Free SEO tools — meta tags, SERP preview & more.', href: 'https://seo-kit-tau.vercel.app' },
+  { name: 'PixelForge AI', emoji: '🎨', desc: 'Free AI image generator — avatars, logos, art & more.', href: 'https://pixelforge-ai-chi.vercel.app' },
+];
 
 export default function Footer() {
   return (
@@ -65,6 +72,32 @@ export default function Footer() {
               </div>
             ))}
           </motion.div>
+
+          {/* Cross-promo section */}
+          <div className="w-full max-w-2xl">
+            <h3 className="text-xs uppercase tracking-wider text-slate-500 text-center mb-4">
+              More Free Tools by Us
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {promoSites.map(site => (
+                <a
+                  key={site.name}
+                  href={site.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-3 rounded-lg border border-white/[0.05] bg-white/[0.01] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all group text-center"
+                >
+                  <div className="text-lg mb-1">{site.emoji}</div>
+                  <div className="text-xs font-medium text-slate-300 group-hover:text-white transition-colors">
+                    {site.name}
+                  </div>
+                  <div className="text-[10px] text-slate-600 mt-0.5 hidden sm:block">
+                    {site.desc}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
 
           {/* Copyright */}
           <p className="text-xs text-slate-600">

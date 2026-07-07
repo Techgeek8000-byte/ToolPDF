@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/api/'],
       },
     ],
-    sitemap: 'https://toolpdf.vercel.app/sitemap.xml', // Replace with your actual domain
+    sitemap: 'https://tool-pdf-six.vercel.app/sitemap.xml',
   };
 }

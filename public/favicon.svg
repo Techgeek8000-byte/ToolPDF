@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="32" height="32" rx="6" fill="url(#bg)"/>
+  <!-- Document shape -->
+  <path d="M8 4h10l6 6v18a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="white" opacity="0.95"/>
+  <!-- Fold corner -->
+  <path d="M18 4v4a2 2 0 0 0 2 2h4" fill="#e2e8f0" opacity="0.7"/>
+  <!-- Text lines -->
+  <rect x="10" y="14" width="10" height="1.5" rx="0.75" fill="#10b981" opacity="0.8"/>
+  <rect x="10" y="17.5" width="7" height="1.5" rx="0.75" fill="#10b981" opacity="0.5"/>
+  <rect x="10" y="21" width="8" height="1.5" rx="0.75" fill="#10b981" opacity="0.35"/>
+  <!-- PDF badge -->
+  <rect x="4" y="2" width="14" height="5" rx="2" fill="#ef4444" opacity="0.95"/>
+  <text x="11" y="5.8" font-family="Arial, sans-serif" font-weight="bold" font-size="3.5" fill="white" text-anchor="middle">PDF</text>
+</svg>

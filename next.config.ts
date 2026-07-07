@@ -5,7 +5,9 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
-  turbopack: {},
+  turbopack: {
+    root: process.cwd(),
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.alias.canvas = false;
