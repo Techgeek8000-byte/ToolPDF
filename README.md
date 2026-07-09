@@ -1,47 +1,15 @@
-# ToolPDF — A Project by Osama
+# ToolPDF — Free Online PDF Tools
 
-Every PDF Tool You'll Ever Need. Free, fast, and private.
+Merge, split, compress, rotate, watermark, and convert PDFs — all processed in your browser. Your files never leave your device.
 
-## Quick Start
+🌐 **[tool-pdf-six.vercel.app](https://tool-pdf-six.vercel.app)**
 
-```bash
-npm install
-npx next dev
-```
+## Features
 
-Open http://localhost:3000
-
-## 10 Tools
-Merge, Split, Compress, PDF-to-Word, Word-to-PDF, PDF-to-Image, Image-to-PDF, Rotate, Protect, Watermark
-
-## Pages
-- `/` — Home (all tools)
-- `/privacy` — Privacy Policy
-- `/terms` — Terms of Service
-- `/sitemap.xml` — Auto-generated sitemap
-- `/robots.txt` — SEO robots file
-
-## Setup After Deploy
-
-### Google Analytics
-1. Go to https://analytics.google.com
-2. Create a Property → Web → Enter your domain
-3. Copy the Measurement ID (G-XXXXXXXXXX)
-4. Replace `G-XXXXXXXXXX` in `src/app/layout.tsx` (2 places)
-
-### Google AdSense
-1. Go to https://www.google.com/adsense
-2. Apply with your site URL
-3. Get your publisher ID (ca-pub-XXXXXXX)
-4. Replace placeholders in `src/components/toolpdf/AdBanner.tsx`
-
-### Stripe Payments
-1. Go to https://stripe.com and create an account
-2. Create 2 Price objects (monthly $5, lifetime $120)
-3. Create `/api/create-checkout-session` API route
-4. Update `src/components/toolpdf/CheckoutModal.tsx`
-
-## Deploy to Vercel
-```bash
-npx vercel
-```
+- **12+ PDF tools** — Merge, Split, Compress, Rotate, Watermark, Protect, Unlock, PDF to Word, PDF to Images, Extract Pages, Remove Pages, Reorder Pages
+- **100% private** — Client-side processing with pdf-lib. No uploads, no servers
+- **Free tier** — 15 operations/day at no cost
+- **Pro plans** — $1/week, $2/month, $12/year, or $25 lifetime
+- **Drag & drop** — Intuitive file upload with visual progress
+- **File size indicator** — See estimated compressed size before downloading
+...
