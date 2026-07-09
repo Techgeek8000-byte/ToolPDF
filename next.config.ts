@@ -5,16 +5,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
-  turbopack: {
-    root: process.cwd(),
-  },
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.alias.canvas = false;
-    }
-    return config;
-  },
-  serverExternalPackages: ['pdfjs-dist'],
+  serverExternalPackages: ['pdfjs-dist', 'canvas'],
 };
 
 export default nextConfig;

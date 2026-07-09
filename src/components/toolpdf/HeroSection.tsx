@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState, useRef } from 'react';
 import { ArrowDown, FileText } from 'lucide-react';
+import { getTodayTotal } from '@/lib/usage-counter';
 
 function AnimatedCounter({ target, suffix = '' }: { target: string; suffix?: string }) {
   const numericTarget = parseInt(target);
@@ -39,6 +40,11 @@ const floatingIcons = [
 
 export default function HeroSection() {
   const toolsRef = useRef<HTMLDivElement>(null);
+  const [todayTotal, setTodayTotal] = useState(0);
+
+  useEffect(() => {
+    setTodayTotal(getTodayTotal());
+  }, []);
 
   const scrollToTools = () => {
     toolsRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -122,6 +128,14 @@ export default function HeroSection() {
               <div className="mt-1 text-sm text-slate-500">{stat.label}</div>
             </div>
           ))}
+          {todayTotal > 0 && (
+            <div className="text-center">
+              <div className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gradient-emerald-cyan">
+                <AnimatedCounter target={String(todayTotal)} />
+              </div>
+              <div className="mt-1 text-sm text-slate-500">Files Processed Today</div>
+            </div>
+          )}
         </motion.div>
 
         {/* CTA */}

@@ -1,8 +1,10 @@
 'use client';
 
-import { FileText, Search, Sparkles, Crown, ExternalLink } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { FileText, Search, Sparkles, Crown, ExternalLink, BarChart3 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { motion } from 'framer-motion';
+import { getTodayTotal } from '@/lib/usage-counter';
 
 const promoSites = [
   { name: 'CalcHub', emoji: '🧮', href: 'https://calc-hub-ashy.vercel.app' },
@@ -17,6 +19,15 @@ interface HeaderProps {
 
 export default function Header({ onUpgradeClick }: HeaderProps) {
   const { searchQuery, setSearchQuery, setPremium, isPremium, currentView, setView, resetTool } = useAppStore();
+  const [todayCount, setTodayCount] = useState(0);
+
+  useEffect(() => {
+    setTodayCount(getTodayTotal());
+    const interval = setInterval(() => {
+      setTodayCount(getTodayTotal());
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -83,6 +94,19 @@ export default function Header({ onUpgradeClick }: HeaderProps) {
 
           {/* Right actions */}
           <div className="flex items-center gap-3">
+            {/* Usage counter */}
+            {todayCount > 0 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="hidden sm:flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 px-3 py-1.5"
+              >
+                <BarChart3 className="h-3.5 w-3.5 text-cyan-400" />
+                <span className="text-xs text-slate-400">
+                  <span className="text-cyan-400 font-semibold">{todayCount}</span> PDF{todayCount !== 1 ? 's' : ''} processed today
+                </span>
+              </motion.div>
+            )}
             {!isPremium ? (
               <button
                 onClick={handlePremiumClick}

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, X, FileText, Image as ImageIcon, FileType } from 'lucide-react';
+import { Upload, X, FileText, Image as ImageIcon, FileType, ArrowDownToLine } from 'lucide-react';
 
 interface FileUploaderProps {
   accept?: string;
@@ -84,11 +84,13 @@ export default function FileUploader({
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragOver(true);
   }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragOver(false);
   }, []);
 
@@ -122,12 +124,31 @@ export default function FileUploader({
         onClick={handleClick}
         className={`relative cursor-pointer rounded-2xl border-2 border-dashed p-8 sm:p-12 text-center transition-all duration-300 ${
           isDragOver
-            ? 'border-emerald-400 bg-emerald-500/10'
+            ? 'border-emerald-400 bg-emerald-500/10 shadow-[0_0_40px_rgba(16,185,129,0.15)] scale-[1.02]'
             : 'border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]'
         }`}
-        animate={isDragOver ? { scale: 1.01 } : { scale: 1 }}
-        transition={{ duration: 0.2 }}
+        animate={
+          isDragOver
+            ? { scale: 1.02, borderColor: 'rgba(16,185,129,0.8)' }
+            : { scale: 1, borderColor: 'rgba(255,255,255,0.1)' }
+        }
+        transition={{ duration: 0.25, ease: 'easeOut' }}
       >
+        {/* Glow effect during drag */}
+        <AnimatePresence>
+          {isDragOver && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 rounded-2xl pointer-events-none"
+              style={{
+                background: 'radial-gradient(ellipse at center, rgba(16,185,129,0.08) 0%, transparent 70%)',
+              }}
+            />
+          )}
+        </AnimatePresence>
+
         <input
           ref={inputRef}
           type="file"
@@ -140,23 +161,26 @@ export default function FileUploader({
         <motion.div
           animate={isDragOver ? { y: -8 } : { y: 0 }}
           transition={{ duration: 0.2 }}
+          className="relative z-10"
         >
           <div
-            className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl transition-colors duration-300 ${
+            className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl transition-all duration-300 ${
               isDragOver
-                ? 'bg-emerald-500/20'
+                ? 'bg-emerald-500/20 scale-110'
                 : 'bg-white/5'
             }`}
           >
-            <Upload
-              className={`h-8 w-8 transition-colors duration-300 ${
-                isDragOver ? 'text-emerald-400' : 'text-white/40'
-              }`}
-            />
+            {isDragOver ? (
+              <ArrowDownToLine className="h-8 w-8 text-emerald-400 animate-bounce" />
+            ) : (
+              <Upload className="h-8 w-8 text-white/40" />
+            )}
           </div>
 
           <p className="text-lg font-semibold text-white">
-            {isDragOver ? 'Drop files here' : `Drag & drop your ${getAcceptLabel()} here`}
+            {isDragOver
+              ? `Drop ${getAcceptLabel().toLowerCase()} here`
+              : `Drag & drop your ${getAcceptLabel().toLowerCase()} here`}
           </p>
           <p className="mt-2 text-sm text-slate-400">
             or{' '}
@@ -217,6 +241,7 @@ export default function FileUploader({
                       removeFile(i);
                     }}
                     className="shrink-0 rounded-lg p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                    aria-label={`Remove ${file.name}`}
                   >
                     <X className="h-4 w-4" />
                   </button>

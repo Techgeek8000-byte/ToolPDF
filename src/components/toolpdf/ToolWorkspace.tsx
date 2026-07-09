@@ -13,12 +13,15 @@ import {
   Sparkles,
   FileText,
   Image as ImageIcon,
+  Copy,
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import { useAppStore } from '@/lib/store';
 import { tools } from '@/lib/tool-definitions';
 import FileUploader from './FileUploader';
+import SocialShare from './SocialShare';
 import { AnimatedProgressBar } from './ProgressBar';
+import { toast } from '@/hooks/use-toast';
 import {
   mergePDFs,
   splitPDF,
@@ -34,6 +37,140 @@ import {
   COMING_SOON_TOOLS,
 } from '@/lib/pdf-tools';
 import { PDFDocument } from 'pdf-lib';
+import { incrementUsage as incUsage, getTodayTotal } from '@/lib/usage-counter';
+
+// --- Skeleton Components ---
+function FileListSkeleton() {
+  return (
+    <div className="mt-4 space-y-2">
+      {[1, 2].map((i) => (
+        <div
+          key={i}
+          className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/8 px-4 py-3"
+        >
+          <div className="h-5 w-5 rounded bg-white/10 animate-pulse" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-3 w-48 rounded bg-white/10 animate-pulse" />
+            <div className="h-2.5 w-20 rounded bg-white/10 animate-pulse" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProcessingSkeleton() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mt-4 space-y-4"
+    >
+      <div className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 px-4 py-4">
+        <Loader2 className="h-5 w-5 text-emerald-400 animate-spin shrink-0" />
+        <div className="flex-1 space-y-2">
+          <div className="h-2.5 w-full rounded-full bg-white/10 overflow-hidden">
+            <motion.div
+              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500"
+              animate={{ width: ['0%', '30%', '55%', '70%', '85%', '92%', '96%'] }}
+              transition={{ duration: 3, ease: 'easeInOut' }}
+            />
+          </div>
+          <div className="h-2 w-32 rounded bg-white/10 animate-pulse" />
+        </div>
+      </div>
+
+      {/* Skeleton result cards */}
+      <div className="space-y-2">
+        {[1].map((i) => (
+          <div
+            key={i}
+            className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/8 px-4 py-3"
+          >
+            <div className="h-5 w-5 rounded bg-white/10 animate-pulse" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-3 w-36 rounded bg-white/10 animate-pulse" />
+              <div className="h-2.5 w-16 rounded bg-white/10 animate-pulse" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+// --- Compression size bar ---
+function CompressionBar({
+  originalSize,
+  estimatedSize,
+}: {
+  originalSize: number;
+  estimatedSize: number;
+}) {
+  const ratio = Math.max(0.1, Math.min(1, estimatedSize / originalSize));
+  const savedPercent = Math.max(0, Math.round((1 - estimatedSize / originalSize) * 100));
+
+  return (
+    <div className="mt-3 rounded-xl bg-white/[0.03] border border-white/8 px-4 py-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs text-slate-400">Compression Estimate</span>
+        <span className="text-xs font-medium text-emerald-400">
+          ~{savedPercent}% smaller
+        </span>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-medium text-white">
+          {formatFileSize(originalSize)}
+        </span>
+        <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${ratio * 100}%` }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500"
+          />
+        </div>
+        <span className="text-sm font-medium text-emerald-400">
+          ~{formatFileSize(estimatedSize)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// --- File size row ---
+function FileSizeRow({ file, showBar, estimatedSize }: {
+  file: File;
+  showBar?: boolean;
+  estimatedSize?: number;
+}) {
+  return (
+    <div className="flex-1 min-w-0">
+      <p className="text-sm font-medium text-white truncate">{file.name}</p>
+      <div className="flex items-center gap-2 mt-0.5">
+        <p className="text-xs text-slate-500">{formatFileSize(file.size)}</p>
+        {showBar && estimatedSize !== undefined && (
+          <>
+            <span className="text-xs text-slate-600">→</span>
+            <span className="text-xs text-emerald-400 font-medium">
+              ~{formatFileSize(estimatedSize)}
+            </span>
+          </>
+        )}
+      </div>
+      {showBar && estimatedSize !== undefined && (
+        <div className="mt-1.5 h-1.5 rounded-full bg-white/10 overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.max(5, (estimatedSize / file.size) * 100)}%` }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+            className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ToolWorkspace() {
   const {
@@ -195,8 +332,26 @@ export default function ToolWorkspace() {
       }
 
       incrementUsage();
+      // Also track in per-tool usage counter
+      const toolDef = tools.find((t) => t.id === activeTool);
+      if (toolDef) {
+        incUsage(activeTool!, toolDef.name);
+      }
+
+      // Toast: success
+      toast({
+        title: 'Processing Complete',
+        description: uploadedFiles.length > 1
+          ? `${uploadedFiles.length} files processed successfully`
+          : 'File processed successfully',
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Processing failed');
+      const errMsg = err instanceof Error ? err.message : 'Processing failed';
+      setError(errMsg);
+      toast({
+        title: 'Processing Failed',
+        description: errMsg,
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -263,9 +418,16 @@ export default function ToolWorkspace() {
                     : activeTool === 'image-to-pdf'
                       ? ''
                       : '_processed';
-      const ext = activeTool === 'word-to-pdf' || activeTool === 'image-to-pdf' ? '.pdf' : '.pdf';
+      const ext = '.pdf';
       saveAs(processedFiles[0], `${baseName}${suffix}${ext}`);
     }
+
+    toast({
+      title: 'Downloaded',
+      description: processedFiles.length > 1
+        ? `${processedFiles.length} files downloaded`
+        : 'File downloaded successfully',
+    });
   };
 
   const getToolOptions = () => {
@@ -285,8 +447,7 @@ export default function ToolWorkspace() {
                     splitCount === n
                       ? 'bg-cyan-500/20 border border-cyan-500/40 text-cyan-400'
                       : 'bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10'
-                  }`
-                }
+                  }`}
                 >
                   {n}
                 </button>
@@ -454,6 +615,15 @@ export default function ToolWorkspace() {
     }
   };
 
+  // Compression estimate
+  const getCompressionEstimate = (): number | undefined => {
+    if (activeTool !== 'compress-pdf' || uploadedFiles.length === 0) return undefined;
+    const ratios: Record<string, number> = { low: 0.5, medium: 0.35, high: 0.2 };
+    return uploadedFiles[0].size * (ratios[compressQuality] || 0.35);
+  };
+
+  const compressionEstimate = getCompressionEstimate();
+
   // Coming Soon UI
   if (isComingSoon) {
     return (
@@ -595,6 +765,37 @@ export default function ToolWorkspace() {
               {/* Tool options */}
               {uploadedFiles.length > 0 && getToolOptions()}
 
+              {/* Compression estimate bar (before processing) */}
+              {activeTool === 'compress-pdf' && uploadedFiles.length > 0 && !isProcessing && (
+                <CompressionBar
+                  originalSize={uploadedFiles[0].size}
+                  estimatedSize={compressionEstimate || uploadedFiles[0].size * 0.35}
+                />
+              )}
+
+              {/* File sizes for upload list (non-compress tools) */}
+              {uploadedFiles.length > 0 && activeTool !== 'compress-pdf' && (
+                <div className="mt-4 space-y-2 max-h-60 overflow-y-auto no-scrollbar">
+                  {uploadedFiles.map((file, i) => {
+                    const FIcon = getFileIcon(file.name);
+                    return (
+                      <motion.div
+                        key={`${file.name}-${i}`}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/8 px-4 py-3"
+                      >
+                        <FIcon className="h-5 w-5 text-emerald-400 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white truncate">{file.name}</p>
+                          <p className="text-xs text-slate-500">{formatFileSize(file.size)}</p>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+
               {/* Usage counter */}
               {!isPremium && uploadedFiles.length > 0 && (
                 <p className="mt-4 text-xs text-center text-slate-500">
@@ -616,8 +817,11 @@ export default function ToolWorkspace() {
                 )}
               </AnimatePresence>
 
+              {/* Processing skeleton */}
+              {isProcessing && <ProcessingSkeleton />}
+
               {/* Process button */}
-              {uploadedFiles.length > 0 && (
+              {uploadedFiles.length > 0 && !isProcessing && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -632,29 +836,22 @@ export default function ToolWorkspace() {
                         : 'bg-white/5 text-slate-500 cursor-not-allowed'
                     }`}
                   >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      processLabel()
-                    )}
+                    {processLabel()}
                   </button>
+                </motion.div>
+              )}
 
-                  {/* Progress bar */}
-                  {isProcessing && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-4"
-                    >
-                      <AnimatedProgressBar progress={progress} />
-                      <p className="mt-2 text-center text-sm text-slate-400">
-                        {progress < 100 ? 'Processing...' : 'Finalizing...'}
-                      </p>
-                    </motion.div>
-                  )}
+              {/* Progress bar */}
+              {isProcessing && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-4"
+                >
+                  <AnimatedProgressBar progress={progress} />
+                  <p className="mt-2 text-center text-sm text-slate-400">
+                    {progress < 100 ? 'Processing...' : 'Finalizing...'}
+                  </p>
                 </motion.div>
               )}
 
@@ -720,6 +917,19 @@ export default function ToolWorkspace() {
                 </div>
               )}
 
+              {/* Size comparison bar for all tools */}
+              {activeTool !== 'compress-pdf' && uploadedFiles.length > 0 && (
+                <div className="mt-4 inline-flex items-center gap-3 rounded-xl bg-white/5 border border-white/8 px-4 py-3 text-sm">
+                  <FileIcon className="h-4 w-4 text-emerald-400" />
+                  <span className="text-slate-400">{uploadedFiles[0]?.name}</span>
+                  <span className="text-slate-500">{formatFileSize(uploadedFiles[0]?.size || 0)}</span>
+                  <span className="text-slate-600">→</span>
+                  <span className="text-emerald-400 font-medium">
+                    {formatFileSize(processedFiles[0]?.size || 0)}
+                  </span>
+                </div>
+              )}
+
               {/* Results list for multi-output */}
               {processedFiles.length > 1 && (
                 <div className="mt-6 max-h-48 overflow-y-auto no-scrollbar space-y-2 text-left">
@@ -765,6 +975,14 @@ export default function ToolWorkspace() {
                   Process Another
                 </button>
 
+                {/* Social Share */}
+                <div className="mt-2">
+                  <SocialShare
+                    title={`I just used ${tool.name} on ToolPDF`}
+                    description={tool.description}
+                  />
+                </div>
+
                 {!isPremium && (
                   <p className="mt-2 text-xs text-slate-500">
                     Want batch processing?{' '}
@@ -803,8 +1021,6 @@ function AdPlaceholder({ label }: { label: string }) {
         <span className="text-xs font-medium">Advertisement</span>
       </div>
       <p className="text-[10px] text-slate-700">{label}</p>
-      {/* Replace with actual AdSense code: */}
-      {/* <ins className="adsbygoogle" style={{display:'block'}} data-ad-client="ca-pub-XXXXXXX" data-ad-slot="XXXXXXX" data-ad-format="auto" data-full-width-responsive="true"></ins> */}
     </div>
   );
 }
