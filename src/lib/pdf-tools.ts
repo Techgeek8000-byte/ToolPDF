@@ -1,6 +1,7 @@
 import { PDFDocument, rgb, degrees, StandardFonts } from 'pdf-lib';
 import { Document, Paragraph, TextRun, Packer } from 'docx';
 import mammoth from 'mammoth';
+import * as XLSX from 'xlsx';
 import * as pdfjsLib from 'pdfjs-dist';
 import { addPasswordProtection } from './pdf-encrypt';
 
@@ -543,6 +544,166 @@ export async function imageToPdf(
   }
 
   progressFn(98);
+  const pdfBytes = await pdfDoc.save();
+  progressFn(100);
+  return new Blob([pdfBytes], { type: 'application/pdf' });
+}
+
+export async function excelToPdf(
+  file: File,
+  onProgress?: (p: number) => void
+): Promise<Blob> {
+  const progressFn = onProgress || (() => {});
+  progressFn(5);
+
+  const arrayBuffer = await readFileAsArrayBuffer(file);
+  progressFn(15);
+
+  const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+  const sheetNames = workbook.SheetNames;
+  progressFn(25);
+
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const fontSize = 9;
+  const headerFontSize = 9;
+  const lineHeight = fontSize * 1.4;
+  const headerLineHeight = headerFontSize * 1.4;
+  const margin = 40;
+  const pageWidth = 595.28;
+  const pageHeight = 841.89;
+  const maxWidth = pageWidth - margin * 2;
+  const maxY = pageHeight - margin;
+  const cellPadding = 4;
+
+  for (let s = 0; s < sheetNames.length; s++) {
+    const sheet = workbook.Sheets[sheetNames[s]];
+    const data: string[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as string[][];
+    if (data.length === 0) continue;
+
+    // Sheet title
+    if (s > 0) {
+      pdfDoc.addPage([pageWidth, pageHeight]);
+    }
+    let currentPage = pdfDoc.getPages()[pdfDoc.getPageCount() - 1];
+    let y = maxY;
+
+    // Draw sheet name
+    currentPage.drawText(sheetNames[s], {
+      x: margin,
+      y,
+      size: 14,
+      font: fontBold,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+    y -= 24;
+
+    // Draw line under sheet name
+    currentPage.drawLine({
+      start: { x: margin, y: y + 4 },
+      end: { x: pageWidth - margin, y: y + 4 },
+      thickness: 1,
+      color: rgb(0.8, 0.8, 0.8),
+    });
+    y -= 12;
+
+    // Calculate column widths
+    const numCols = Math.max(...data.map((row) => row.length));
+    const colWidths: number[] = [];
+    for (let c = 0; c < numCols; c++) {
+      let maxLen = 5;
+      for (const row of data) {
+        const cellVal = String(row[c] ?? '');
+        const len = cellVal.length;
+        if (len > maxLen) maxLen = Math.min(len, 40);
+      }
+      colWidths.push(maxLen * fontSize * 0.55 + cellPadding * 2);
+    }
+
+    // Scale columns to fit page width
+    const totalColWidth = colWidths.reduce((a, b) => a + b, 0);
+    const colScale = totalColWidth > maxWidth ? maxWidth / totalColWidth : 1;
+    const scaledColWidths = colWidths.map((w) => w * colScale);
+
+    // Draw rows
+    for (let r = 0; r < data.length; r++) {
+      const row = data[r];
+      const isHeader = r === 0;
+      const rowHeight = isHeader ? headerLineHeight + cellPadding * 2 : lineHeight + cellPadding * 2;
+
+      // Check if we need a new page
+      if (y - rowHeight < margin) {
+        currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+        y = maxY;
+      }
+
+      // Draw header background
+      if (isHeader) {
+        currentPage.drawRectangle({
+          x: margin,
+          y: y - rowHeight + cellPadding,
+          width: maxWidth,
+          height: rowHeight,
+          color: rgb(0.93, 0.93, 0.95),
+        });
+      }
+
+      // Draw alternating row background (non-header)
+      if (!isHeader && r % 2 === 0) {
+        currentPage.drawRectangle({
+          x: margin,
+          y: y - rowHeight + cellPadding,
+          width: maxWidth,
+          height: rowHeight,
+          color: rgb(0.97, 0.97, 0.98),
+        });
+      }
+
+      // Draw cell borders and text
+      let xPos = margin;
+      for (let c = 0; c < numCols; c++) {
+        const cellWidth = scaledColWidths[c] || 50;
+        const cellVal = String(row[c] ?? '');
+        const truncatedVal = cellVal.length > 50 ? cellVal.substring(0, 47) + '...' : cellVal;
+
+        // Cell border
+        currentPage.drawRectangle({
+          x: xPos,
+          y: y - rowHeight + cellPadding,
+          width: cellWidth,
+          height: rowHeight,
+          borderColor: rgb(0.85, 0.85, 0.85),
+          borderWidth: 0.5,
+          opacity: 0,
+        });
+
+        // Cell text
+        const textX = xPos + cellPadding;
+        const textY = y - cellPadding - fontSize * 0.35;
+        try {
+          currentPage.drawText(truncatedVal, {
+            x: textX,
+            y: textY,
+            size: isHeader ? headerFontSize : fontSize,
+            font: isHeader ? fontBold : font,
+            color: rgb(0.15, 0.15, 0.15),
+            maxWidth: cellWidth - cellPadding * 2,
+          });
+        } catch {
+          // Skip cells that can't be rendered
+        }
+
+        xPos += cellWidth;
+      }
+
+      y -= rowHeight;
+    }
+
+    progressFn(25 + Math.round(((s + 1) / sheetNames.length) * 65));
+  }
+
+  progressFn(95);
   const pdfBytes = await pdfDoc.save();
   progressFn(100);
   return new Blob([pdfBytes], { type: 'application/pdf' });

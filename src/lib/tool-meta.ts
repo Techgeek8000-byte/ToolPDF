@@ -55,4 +55,9 @@ export const toolMetaMap: Record<string, ToolMeta> = {
     description: 'Add text or image watermarks to your PDF documents. Free, private tool — files are processed entirely in your browser.',
     keywords: ['watermark PDF', 'add watermark to PDF', 'PDF stamp', 'brand PDF'],
   },
+  'excel-to-pdf': {
+    title: 'Excel to PDF — Convert XLSX/XLS to PDF Free Online | ToolPDF',
+    description: 'Convert Excel spreadsheets (XLSX, XLS) to PDF format. Free, fast, and private conversion in your browser. Multi-sheet support.',
+    keywords: ['Excel to PDF', 'XLSX to PDF', 'convert Excel to PDF', 'spreadsheet to PDF', 'XLS to PDF'],
+  },
 };

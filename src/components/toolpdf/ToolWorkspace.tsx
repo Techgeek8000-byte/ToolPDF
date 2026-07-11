@@ -19,6 +19,7 @@ import { saveAs } from 'file-saver';
 import { useAppStore } from '@/lib/store';
 import { tools } from '@/lib/tool-definitions';
 import FileUploader from './FileUploader';
+import FilePreview from './FilePreview';
 import SocialShare from './SocialShare';
 import { AnimatedProgressBar } from './ProgressBar';
 import { toast } from '@/hooks/use-toast';
@@ -33,6 +34,7 @@ import {
   pdfToWord,
   wordToPdf,
   imageToPdf,
+  excelToPdf,
   formatFileSize,
   COMING_SOON_TOOLS,
 } from '@/lib/pdf-tools';
@@ -80,7 +82,6 @@ function ProcessingSkeleton() {
         </div>
       </div>
 
-      {/* Skeleton result cards */}
       <div className="space-y-2">
         {[1].map((i) => (
           <div
@@ -138,40 +139,6 @@ function CompressionBar({
   );
 }
 
-// --- File size row ---
-function FileSizeRow({ file, showBar, estimatedSize }: {
-  file: File;
-  showBar?: boolean;
-  estimatedSize?: number;
-}) {
-  return (
-    <div className="flex-1 min-w-0">
-      <p className="text-sm font-medium text-white truncate">{file.name}</p>
-      <div className="flex items-center gap-2 mt-0.5">
-        <p className="text-xs text-slate-500">{formatFileSize(file.size)}</p>
-        {showBar && estimatedSize !== undefined && (
-          <>
-            <span className="text-xs text-slate-600">→</span>
-            <span className="text-xs text-emerald-400 font-medium">
-              ~{formatFileSize(estimatedSize)}
-            </span>
-          </>
-        )}
-      </div>
-      {showBar && estimatedSize !== undefined && (
-        <div className="mt-1.5 h-1.5 rounded-full bg-white/10 overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${Math.max(5, (estimatedSize / file.size) * 100)}%` }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500"
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function ToolWorkspace() {
   const {
     activeTool,
@@ -203,6 +170,7 @@ export default function ToolWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [splitCount, setSplitCount] = useState<number>(2);
+  const [showPremiumSplitModal, setShowPremiumSplitModal] = useState(false);
 
   // Determine accept types and multiple based on tool
   const getUploaderProps = () => {
@@ -211,6 +179,8 @@ export default function ToolWorkspace() {
         return { accept: '.pdf', multiple: false, maxFiles: 1 };
       case 'word-to-pdf':
         return { accept: '.docx,.doc', multiple: false, maxFiles: 1 };
+      case 'excel-to-pdf':
+        return { accept: '.xlsx,.xls', multiple: false, maxFiles: 1 };
       case 'image-to-pdf':
         return { accept: '.png,.jpg,.jpeg', multiple: true, maxFiles: 20 };
       case 'merge-pdf':
@@ -222,10 +192,26 @@ export default function ToolWorkspace() {
 
   const uploaderProps = getUploaderProps();
 
+  // Check if a tool's input files support PDF preview
+  const isPdfInput = () => {
+    return ['merge-pdf', 'split-pdf', 'compress-pdf', 'pdf-to-word', 'pdf-to-image', 'rotate-pdf', 'protect-pdf', 'watermark-pdf'].includes(activeTool || '');
+  };
+
+  // Check if a tool's output is PDF (for preview)
+  const isPdfOutput = () => {
+    return ['merge-pdf', 'split-pdf', 'compress-pdf', 'word-to-pdf', 'excel-to-pdf', 'image-to-pdf', 'rotate-pdf', 'protect-pdf', 'watermark-pdf'].includes(activeTool || '');
+  };
+
   // ALL hooks must be called before any conditional returns
   const handleProcess = useCallback(async () => {
     if (!isPremium && dailyUsageCount >= 10) {
       setShowLimitModal(true);
+      return;
+    }
+
+    // Premium check for split count > 3
+    if (activeTool === 'split-pdf' && splitCount > 3 && !isPremium) {
+      setShowPremiumSplitModal(true);
       return;
     }
 
@@ -250,7 +236,7 @@ export default function ToolWorkspace() {
           if (uploadedFiles.length !== 1) {
             throw new Error('Please select exactly 1 file to split');
           }
-          // Auto-generate equal page ranges based on split count
+          // Auto-generate equal page ranges based on splitCount (local state)
           const arrayBuffer = await uploadedFiles[0].arrayBuffer();
           const tempPdf = await PDFDocument.load(arrayBuffer);
           const totalPages = tempPdf.getPageCount();
@@ -290,6 +276,14 @@ export default function ToolWorkspace() {
             throw new Error('Please select a Word document');
           }
           const blob = await wordToPdf(uploadedFiles[0], onProgress);
+          setProcessedFiles([blob]);
+          break;
+        }
+        case 'excel-to-pdf': {
+          if (uploadedFiles.length !== 1) {
+            throw new Error('Please select an Excel file');
+          }
+          const blob = await excelToPdf(uploadedFiles[0], onProgress);
           setProcessedFiles([blob]);
           break;
         }
@@ -358,6 +352,7 @@ export default function ToolWorkspace() {
   }, [
     activeTool,
     uploadedFiles,
+    splitCount,
     splitRanges,
     compressQuality,
     rotateDegrees,
@@ -385,21 +380,43 @@ export default function ToolWorkspace() {
   const canProcess = uploadedFiles.length > 0 && !isProcessing;
   const remainingUses = Math.max(0, 10 - dailyUsageCount);
 
+  // Mobile-compatible download using blob URL + anchor tag
   const handleDownload = () => {
     if (processedFiles.length === 0) return;
 
     if (activeTool === 'split-pdf') {
       const baseName = uploadedFiles[0]?.name.replace('.pdf', '') || 'document';
       processedFiles.forEach((blob, i) => {
-        saveAs(blob, `${baseName}_part${i + 1}_of_${processedFiles.length}.pdf`);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${baseName}_part${i + 1}_of_${processedFiles.length}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       });
     } else if (activeTool === 'pdf-to-image') {
       processedFiles.forEach((blob, i) => {
-        saveAs(blob, `page_${i + 1}.png`);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `page_${i + 1}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       });
     } else if (activeTool === 'pdf-to-word') {
       const baseName = uploadedFiles[0]?.name.replace('.pdf', '') || 'output';
-      saveAs(processedFiles[0], `${baseName}.docx`);
+      const url = URL.createObjectURL(processedFiles[0]);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${baseName}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } else {
       const baseName = uploadedFiles[0]?.name.replace(/\.[^.]+$/, '') || 'output';
       const suffix =
@@ -415,11 +432,20 @@ export default function ToolWorkspace() {
                   ? '_watermarked'
                   : activeTool === 'word-to-pdf'
                     ? ''
-                    : activeTool === 'image-to-pdf'
+                    : activeTool === 'excel-to-pdf'
                       ? ''
-                      : '_processed';
+                      : activeTool === 'image-to-pdf'
+                        ? ''
+                        : '_processed';
       const ext = '.pdf';
-      saveAs(processedFiles[0], `${baseName}${suffix}${ext}`);
+      const url = URL.createObjectURL(processedFiles[0]);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${baseName}${suffix}${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
     toast({
@@ -438,23 +464,39 @@ export default function ToolWorkspace() {
             <label className="block text-sm font-medium text-slate-300 mb-2">
               Split Into <span className="text-slate-500">(equal parts)</span>
             </label>
-            <div className="flex gap-3">
-              {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setSplitCount(n)}
-                  className={`flex-1 rounded-xl px-3 py-3 text-sm font-semibold transition-all ${
-                    splitCount === n
-                      ? 'bg-cyan-500/20 border border-cyan-500/40 text-cyan-400'
-                      : 'bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10'
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
+            <div className="flex gap-2 sm:gap-3 flex-wrap">
+              {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {
+                const isPremiumOnly = n > 3;
+                const isSelected = splitCount === n;
+                return (
+                  <button
+                    key={n}
+                    onClick={() => {
+                      if (isPremiumOnly && !isPremium) {
+                        setShowPremiumSplitModal(true);
+                        return;
+                      }
+                      setSplitCount(n);
+                    }}
+                    className={`relative flex-1 min-w-[40px] rounded-xl px-2 sm:px-3 py-3 text-sm font-semibold transition-all ${
+                      isSelected
+                        ? 'bg-cyan-500/20 border border-cyan-500/40 text-cyan-400'
+                        : 'bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10'
+                    } ${isPremiumOnly && !isPremium ? 'opacity-60' : ''}`}
+                  >
+                    {n}
+                    {isPremiumOnly && (
+                      <Crown className="absolute -top-1.5 -right-1.5 h-3 w-3 text-amber-400" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
             <p className="mt-2 text-xs text-slate-500">
               PDF will be divided into <span className="text-cyan-400 font-medium">{splitCount} equal parts</span> automatically
+              {splitCount > 3 && !isPremium && (
+                <span className="text-amber-400 ml-1"> (Pro)</span>
+              )}
             </p>
           </div>
         );
@@ -583,6 +625,17 @@ export default function ToolWorkspace() {
             </p>
           </div>
         );
+      case 'excel-to-pdf':
+        return (
+          <div className="mt-4 rounded-xl bg-white/[0.03] border border-white/8 px-4 py-3">
+            <p className="text-sm text-slate-300">
+              Your Excel spreadsheet will be converted to a formatted PDF with tables.
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Supports XLSX and XLS files. Each sheet becomes a section with headers and grid lines.
+            </p>
+          </div>
+        );
       default:
         return null;
     }
@@ -597,6 +650,7 @@ export default function ToolWorkspace() {
       case 'compress-pdf': return `Compress ${count} File${count !== 1 ? 's' : ''}`;
       case 'pdf-to-word': return 'Convert to Word';
       case 'word-to-pdf': return 'Convert to PDF';
+      case 'excel-to-pdf': return 'Convert to PDF';
       case 'pdf-to-image': return 'Convert to Images';
       case 'image-to-pdf': return `Convert ${count} Image${count !== 1 ? 's' : ''} to PDF`;
       case 'rotate-pdf': return `Rotate ${count} File${count !== 1 ? 's' : ''}`;
@@ -610,6 +664,7 @@ export default function ToolWorkspace() {
     switch (activeTool) {
       case 'pdf-to-word': return 'PDF files up to 100MB';
       case 'word-to-pdf': return 'DOCX files up to 100MB';
+      case 'excel-to-pdf': return 'XLSX/XLS files up to 100MB';
       case 'image-to-pdf': return 'PNG/JPEG images up to 100MB each';
       default: return 'PDF files up to 100MB each';
     }
@@ -664,12 +719,26 @@ export default function ToolWorkspace() {
 
   const getFileIcon = () => {
     if (activeTool === 'image-to-pdf') return ImageIcon;
+    if (activeTool === 'pdf-to-image') return ImageIcon;
+    if (activeTool === 'excel-to-pdf') return FileText;
     return FileText;
   };
   const FileIcon = getFileIcon();
 
+  // Generate output file names for preview
+  const getOutputFileNames = (): string[] => {
+    if (activeTool === 'split-pdf') {
+      const baseName = uploadedFiles[0]?.name.replace('.pdf', '') || 'document';
+      return processedFiles.map((_, i) => `${baseName}_part${i + 1}.pdf`);
+    }
+    if (activeTool === 'pdf-to-image') {
+      return processedFiles.map((_, i) => `page_${i + 1}.png`);
+    }
+    return [`${uploadedFiles[0]?.name.replace(/\.[^.]+$/, '') || 'output'}${activeTool === 'pdf-to-word' ? '.docx' : '.pdf'}`];
+  };
+
   return (
-    <div className="min-h-[80vh]">
+    <div className="min-h-[80vh] pb-8 sm:pb-8">
       {/* Limit Modal */}
       <AnimatePresence>
         {showLimitModal && (
@@ -705,6 +774,53 @@ export default function ToolWorkspace() {
                     setShowLimitModal(false);
                   }}
                   className="flex-1 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-3 text-sm font-semibold text-white hover:scale-105 transition-transform"
+                >
+                  Go Pro
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Premium Split Modal */}
+      <AnimatePresence>
+        {showPremiumSplitModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setShowPremiumSplitModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-2xl border border-white/10 bg-[#13131a] p-8 text-center"
+            >
+              <Crown className="mx-auto h-10 w-10 text-amber-400" />
+              <h3 className="mt-4 text-xl font-bold text-white">Pro Feature</h3>
+              <p className="mt-2 text-sm text-slate-400">
+                Splitting into {splitCount} parts requires a Pro plan. Free users can split into 2 or 3 equal parts.
+              </p>
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowPremiumSplitModal(false);
+                    setSplitCount(2);
+                  }}
+                  className="flex-1 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-white/10 transition-colors"
+                >
+                  Use Free (2 parts)
+                </button>
+                <button
+                  onClick={() => {
+                    useAppStore.getState().setPremium(true);
+                    setShowPremiumSplitModal(false);
+                  }}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-sm font-semibold text-white hover:scale-105 transition-transform"
                 >
                   Go Pro
                 </button>
@@ -752,7 +868,7 @@ export default function ToolWorkspace() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              {/* Upload */}
+              {/* Upload — hide internal file list since FilePreview shows thumbnails below */}
               <FileUploader
                 accept={uploaderProps.accept}
                 multiple={uploaderProps.multiple}
@@ -760,6 +876,7 @@ export default function ToolWorkspace() {
                 files={uploadedFiles}
                 onFilesChange={setUploadedFiles}
                 hint={getUploadHint()}
+                hideFileList
               />
 
               {/* Tool options */}
@@ -773,27 +890,14 @@ export default function ToolWorkspace() {
                 />
               )}
 
-              {/* File sizes for upload list (non-compress tools) */}
-              {uploadedFiles.length > 0 && activeTool !== 'compress-pdf' && (
-                <div className="mt-4 space-y-2 max-h-60 overflow-y-auto no-scrollbar">
-                  {uploadedFiles.map((file, i) => {
-                    const FIcon = getFileIcon(file.name);
-                    return (
-                      <motion.div
-                        key={`${file.name}-${i}`}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/8 px-4 py-3"
-                      >
-                        <FIcon className="h-5 w-5 text-emerald-400 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-white truncate">{file.name}</p>
-                          <p className="text-xs text-slate-500">{formatFileSize(file.size)}</p>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
+              {/* PREVIEW: Before conversion (PDF & image inputs only) */}
+              {uploadedFiles.length > 0 && !isProcessing && (
+                <FilePreview
+                  files={uploadedFiles}
+                  label="Preview"
+                  maxThumbnails={activeTool === 'merge-pdf' ? 10 : 4}
+                  toolId={activeTool || undefined}
+                />
               )}
 
               {/* Usage counter */}
@@ -869,7 +973,6 @@ export default function ToolWorkspace() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="text-center"
             >
               {/* Success icon */}
               <motion.div
@@ -885,6 +988,17 @@ export default function ToolWorkspace() {
               <p className="mt-2 text-slate-400">
                 Your file{processedFiles.length > 1 ? 's have' : ' has'} been processed successfully.
               </p>
+
+              {/* PREVIEW: After conversion (output files) */}
+              <div className="mt-6">
+                <FilePreview
+                  files={processedFiles}
+                  fileNames={getOutputFileNames()}
+                  label="Output Preview"
+                  maxThumbnails={6}
+                  toolId={activeTool || undefined}
+                />
+              </div>
 
               {/* Size comparison for compress */}
               {activeTool === 'compress-pdf' && uploadedFiles.length > 0 && (
@@ -917,14 +1031,14 @@ export default function ToolWorkspace() {
                 </div>
               )}
 
-              {/* Size comparison bar for all tools */}
-              {activeTool !== 'compress-pdf' && uploadedFiles.length > 0 && (
+              {/* Size comparison for other single-output tools */}
+              {activeTool !== 'compress-pdf' && processedFiles.length === 1 && uploadedFiles.length > 0 && (
                 <div className="mt-4 inline-flex items-center gap-3 rounded-xl bg-white/5 border border-white/8 px-4 py-3 text-sm">
-                  <FileIcon className="h-4 w-4 text-emerald-400" />
-                  <span className="text-slate-400">{uploadedFiles[0]?.name}</span>
-                  <span className="text-slate-500">{formatFileSize(uploadedFiles[0]?.size || 0)}</span>
-                  <span className="text-slate-600">→</span>
-                  <span className="text-emerald-400 font-medium">
+                  <FileIcon className="h-4 w-4 text-emerald-400 shrink-0" />
+                  <span className="text-slate-400 max-w-[120px] sm:max-w-none truncate">{uploadedFiles[0]?.name}</span>
+                  <span className="text-slate-500 shrink-0">{formatFileSize(uploadedFiles[0]?.size || 0)}</span>
+                  <span className="text-slate-600 shrink-0">→</span>
+                  <span className="text-emerald-400 font-medium shrink-0">
                     {formatFileSize(processedFiles[0]?.size || 0)}
                   </span>
                 </div>
@@ -944,7 +1058,7 @@ export default function ToolWorkspace() {
                           ? `${uploadedFiles[0]?.name.replace('.pdf', '')}_part${i + 1}.pdf`
                           : `page_${i + 1}.png`}
                       </span>
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-slate-500 shrink-0">
                         {formatFileSize(blob.size)}
                       </span>
                     </div>
@@ -952,18 +1066,21 @@ export default function ToolWorkspace() {
                 </div>
               )}
 
-              {/* Download button */}
-              <div className="mt-8 flex flex-col items-center gap-4">
+              {/* Download button — MOBILE FRIENDLY */}
+              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 sticky bottom-4 z-40">
                 <button
                   onClick={handleDownload}
-                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-10 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 hover:scale-105 active:scale-95 transition-all"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-8 sm:px-10 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 hover:scale-105 active:scale-95 transition-all"
                 >
                   <Download className="h-5 w-5" />
                   {processedFiles.length > 1
                     ? `Download ${processedFiles.length} Files`
                     : 'Download File'}
                 </button>
+              </div>
 
+              {/* Process Another & Social Share */}
+              <div className="mt-6 flex flex-col items-center gap-4">
                 <button
                   onClick={() => {
                     setProcessedFiles([]);

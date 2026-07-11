@@ -9,6 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     'compress-pdf',
     'pdf-to-word',
     'word-to-pdf',
+    'excel-to-pdf',
     'pdf-to-image',
     'image-to-pdf',
     'rotate-pdf',

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, X, FileText, Image as ImageIcon, FileType, ArrowDownToLine } from 'lucide-react';
+import { Upload, X, FileText, Image as ImageIcon, FileType, ArrowDownToLine, Table } from 'lucide-react';
 
 interface FileUploaderProps {
   accept?: string;
@@ -12,12 +12,14 @@ interface FileUploaderProps {
   files: File[];
   onFilesChange: (files: File[]) => void;
   hint?: string;
+  hideFileList?: boolean;
 }
 
 function getFileIcon(fileName: string) {
   const ext = fileName.split('.').pop()?.toLowerCase();
   if (ext === 'png' || ext === 'jpg' || ext === 'jpeg') return ImageIcon;
   if (ext === 'docx' || ext === 'doc') return FileType;
+  if (ext === 'xlsx' || ext === 'xls') return Table;
   return FileText;
 }
 
@@ -29,6 +31,7 @@ export default function FileUploader({
   files,
   onFilesChange,
   hint,
+  hideFileList = false,
 }: FileUploaderProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +39,7 @@ export default function FileUploader({
 
   const getAcceptLabel = () => {
     if (accept.includes('.docx')) return 'Word documents';
+    if (accept.includes('.xlsx')) return 'Excel spreadsheets';
     if (accept.includes('.png')) return 'PNG/JPEG images';
     return 'PDF files';
   };
@@ -210,7 +214,7 @@ export default function FileUploader({
 
       {/* File list */}
       <AnimatePresence>
-        {files.length > 0 && (
+        {files.length > 0 && !hideFileList && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
