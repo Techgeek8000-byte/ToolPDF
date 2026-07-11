@@ -577,16 +577,27 @@ export async function excelToPdf(
   const maxY = pageHeight - margin;
   const cellPadding = 4;
 
+  // Helper: always get a fresh page reference from the document
+  const getLatestPage = () => {
+    const count = pdfDoc.getPageCount();
+    if (count === 0) return null;
+    return pdfDoc.getPage(count - 1);
+  };
+
+  // Helper: add a new page and return a fresh reference
+  const addNewPage = () => {
+    pdfDoc.addPage([pageWidth, pageHeight]);
+    return getLatestPage();
+  };
+
   for (let s = 0; s < sheetNames.length; s++) {
     const sheet = workbook.Sheets[sheetNames[s]];
     const data: string[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as string[][];
     if (data.length === 0) continue;
 
-    // Sheet title
-    if (s > 0) {
-      pdfDoc.addPage([pageWidth, pageHeight]);
-    }
-    let currentPage = pdfDoc.getPages()[pdfDoc.getPageCount() - 1];
+    // Always add a new page for each sheet
+    let currentPage = addNewPage();
+    if (!currentPage) throw new Error('Failed to create PDF page');
     let y = maxY;
 
     // Draw sheet name
@@ -634,9 +645,13 @@ export async function excelToPdf(
 
       // Check if we need a new page
       if (y - rowHeight < margin) {
-        currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+        currentPage = addNewPage();
+        if (!currentPage) throw new Error('Failed to create new PDF page');
         y = maxY;
       }
+
+      // Re-fetch fresh reference before drawing on each row
+      currentPage = getLatestPage() || currentPage;
 
       // Draw header background
       if (isHeader) {
@@ -667,7 +682,7 @@ export async function excelToPdf(
         const cellVal = String(row[c] ?? '');
         const truncatedVal = cellVal.length > 50 ? cellVal.substring(0, 47) + '...' : cellVal;
 
-        // Cell border
+        // Cell border (no opacity param — not supported by pdf-lib)
         currentPage.drawRectangle({
           x: xPos,
           y: y - rowHeight + cellPadding,
@@ -675,23 +690,23 @@ export async function excelToPdf(
           height: rowHeight,
           borderColor: rgb(0.85, 0.85, 0.85),
           borderWidth: 0.5,
-          opacity: 0,
         });
 
-        // Cell text
-        const textX = xPos + cellPadding;
-        const textY = y - cellPadding - fontSize * 0.35;
-        try {
-          currentPage.drawText(truncatedVal, {
-            x: textX,
-            y: textY,
-            size: isHeader ? headerFontSize : fontSize,
-            font: isHeader ? fontBold : font,
-            color: rgb(0.15, 0.15, 0.15),
-            maxWidth: cellWidth - cellPadding * 2,
-          });
-        } catch {
-          // Skip cells that can't be rendered
+        // Cell text — guard against negative/zero maxWidth
+        const textMaxWidth = Math.max(cellWidth - cellPadding * 2, 1);
+        if (truncatedVal) {
+          try {
+            currentPage.drawText(truncatedVal, {
+              x: xPos + cellPadding,
+              y: y - cellPadding - fontSize * 0.35,
+              size: isHeader ? headerFontSize : fontSize,
+              font: isHeader ? fontBold : font,
+              color: rgb(0.15, 0.15, 0.15),
+              maxWidth: textMaxWidth,
+            });
+          } catch {
+            // Skip cells that can't be rendered (e.g. unsupported characters)
+          }
         }
 
         xPos += cellWidth;
