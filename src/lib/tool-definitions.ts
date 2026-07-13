@@ -9,7 +9,6 @@ import {
   RotateCw,
   Lock,
   Stamp,
-  Table,
   LucideIcon,
 } from 'lucide-react';
 import { ToolDef } from '@/components/toolpdf/ToolCard';
@@ -58,15 +57,6 @@ export const tools: ToolDef[] = [
     icon: FileType,
     gradient: 'from-purple-500 to-pink-500',
     iconBg: 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(236,72,153,0.2))',
-    category: 'convert',
-  },
-  {
-    id: 'excel-to-pdf',
-    name: 'Excel to PDF',
-    description: 'Convert Excel spreadsheets to PDF format',
-    icon: Table,
-    gradient: 'from-green-500 to-emerald-500',
-    iconBg: 'linear-gradient(135deg, rgba(34,197,94,0.2), rgba(16,185,129,0.2))',
     category: 'convert',
   },
   {

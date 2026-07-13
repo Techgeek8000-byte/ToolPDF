@@ -28,11 +28,4 @@ export const toolContent: Record<string, { intro: string; faqs: { question: stri
       { question: 'How accurate is PDF to Word conversion?', answer: 'Accuracy depends on the PDF structure. Text-based PDFs convert with near-perfect accuracy including fonts and formatting. Scanned/image-based PDFs may require OCR for best results. Complex layouts with tables and columns generally convert well but may need minor adjustments.' },
     ],
   },
-  'excel-to-pdf': {
-    intro: 'Convert Excel spreadsheets (XLSX, XLS) to PDF format for free. Each sheet becomes a separate page with formatted tables, headers, and cell data preserved. Supports multi-sheet workbooks, auto-fitting columns, and maintaining the visual structure of your data. Perfect for sharing reports, financial data, or any spreadsheet content as a universal PDF document.',
-    faqs: [
-      { question: 'Does it support multi-sheet Excel files?', answer: 'Yes — each sheet in your workbook is converted to a separate page (or multiple pages for large sheets) in the resulting PDF. Sheet names are displayed as headers.' },
-      { question: 'Will my Excel formatting be preserved?', answer: 'Text content, cell values, and the table structure are preserved. Complex formatting like merged cells, conditional formatting, charts, and images may not be supported in this version.' },
-    ],
-  },
 };
