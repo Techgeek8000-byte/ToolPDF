@@ -117,7 +117,7 @@ export default function HeroSection() {
           transition={{ delay: 0.4, duration: 0.6 }}
         >
           {[
-            { value: '10', suffix: '+', label: 'Tools' },
+            { value: '27', suffix: '+', label: 'Tools' },
             { value: '100', suffix: '%', label: 'Free' },
             { value: '100', suffix: '%', label: 'Private' },
           ].map((stat) => (

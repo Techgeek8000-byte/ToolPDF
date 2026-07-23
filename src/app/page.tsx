@@ -1,175 +1,25 @@
 'use client';
 
-import CrossPromo from '@/components/CrossPromo';
 import { useState, useEffect } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Clock, ChevronRight } from 'lucide-react';
-import BackgroundEffects from '@/components/toolpdf/BackgroundEffects';
-import Header from '@/components/toolpdf/Header';
-import HeroSection from '@/components/toolpdf/HeroSection';
-import PrivacyBadge from '@/components/toolpdf/PrivacyBadge';
-import ToolGrid from '@/components/toolpdf/ToolGrid';
-import HowItWorks from '@/components/toolpdf/HowItWorks';
-import PricingSection from '@/components/toolpdf/PricingSection';
-import Footer from '@/components/toolpdf/Footer';
-import ToolWorkspace from '@/components/toolpdf/ToolWorkspace';
-import AdBanner from '@/components/toolpdf/AdBanner';
-import CheckoutModal from '@/components/toolpdf/CheckoutModal';
-import { useAppStore } from '@/lib/store';
-import { getRecentToolsList } from '@/lib/usage-counter';
-import { tools } from '@/lib/tool-definitions';
+import dynamic from 'next/dynamic';
 
-export default function Home() {
-  const { currentView, isPremium } = useAppStore();
-  const [showCheckout, setShowCheckout] = useState(false);
-  const [recentTools, setRecentTools] = useState<{ id: string; name: string }[]>([]);
-
-  useEffect(() => {
-    const recent = getRecentToolsList();
-    const filtered = recent
-      .filter((r) => tools.some((t) => t.id === r.id))
-      .filter((r, i, arr) => arr.findIndex((x) => x.id === r.id) === i)
-      .slice(0, 4);
-    setRecentTools(filtered);
-  }, [currentView]);
-
-  const handleRecentToolClick = (toolId: string) => {
-    const store = useAppStore.getState();
-    store.resetTool();
-    store.setActiveTool(toolId);
-    store.setView('tool');
-  };
-
-  return (
-    <div className="relative min-h-screen flex flex-col">
-      <BackgroundEffects />
-
-      <div className="relative z-10 flex flex-col min-h-screen">
-        <Header onUpgradeClick={() => setShowCheckout(true)} />
-
-        <main className="flex-1">
-          <AnimatePresence mode="wait">
-            {currentView === 'home' ? (
-              <motion.div
-                key="home"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <HeroSection />
-
-                {/* Recently Used Tools */}
-                {recentTools.length > 0 && (
-                  <section className="py-6 sm:py-8">
-                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2, duration: 0.5 }}
-                      >
-                        <div className="flex items-center gap-2 mb-4">
-                          <Clock className="h-4 w-4 text-cyan-400" />
-                          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
-                            Recently Used
-                          </h2>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                          {recentTools.map((rt, i) => {
-                            const toolDef = tools.find((t) => t.id === rt.id);
-                            if (!toolDef) return null;
-                            const RIcon = toolDef.icon;
-                            return (
-                              <motion.button
-                                key={rt.id}
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.3 + i * 0.05 }}
-                                whileHover={{ scale: 1.03 }}
-                                whileTap={{ scale: 0.97 }}
-                                onClick={() => handleRecentToolClick(rt.id)}
-                                className="flex items-center gap-3 rounded-xl bg-white/[0.03] border border-white/[0.08] px-4 py-3 text-left hover:bg-white/[0.06] hover:border-white/[0.15] transition-all"
-                              >
-                                <div
-                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-                                  style={{ background: toolDef.iconBg }}
-                                >
-                                  <RIcon className="h-4 w-4 text-white" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-white truncate">
-                                    {toolDef.name}
-                                  </p>
-                                  <p className="text-xs text-slate-500 truncate">
-                                    {toolDef.description}
-                                  </p>
-                                </div>
-                                <ChevronRight className="h-4 w-4 text-slate-600 shrink-0" />
-                              </motion.button>
-                            );
-                          })}
-                        </div>
-                      </motion.div>
-                    </div>
-                  </section>
-                )}
-
-                {/* Ad Banner 1: Below Hero */}
-                {!isPremium && (
-                  <div className="px-4 sm:px-6 py-4">
-                    <AdBanner slot="hero-bottom-728x90" format="horizontal" label="Advertisement · 728x90" />
-                  </div>
-                )}
-
-                <PrivacyBadge />
-                <ToolGrid />
-
-                {/* Ad Banner 2: Between Tools and How It Works */}
-                {!isPremium && (
-                  <div className="px-4 sm:px-6 py-4">
-                    <AdBanner slot="mid-content-728x90" format="horizontal" label="Advertisement · 728x90" />
-                  </div>
-                )}
-
-                <HowItWorks />
-                <PricingSection onUpgradeClick={() => setShowCheckout(true)} />
-
-                {/* Ad Banner 3: Above Footer */}
-                {!isPremium && (
-                  <div className="px-4 sm:px-6 py-4">
-                    <AdBanner slot="pre-footer-728x90" format="horizontal" label="Advertisement · 728x90" />
-                  </div>
-                )}
-              </motion.div>
-            ) : (
-              <motion.div
-                key="tool"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <ToolWorkspace />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </main>
-        <CrossPromo exclude="ToolPDF" />
-        <Footer />
-
-        {/* Ad Banner 4: Sticky Bottom (mobile only, non-premium) */}
-        {!isPremium && currentView === 'home' && (
-          <div className="fixed bottom-0 left-0 right-0 z-50 sm:hidden">
-            <AdBanner slot="mobile-sticky-320x50" format="horizontal" className="!max-w-none !rounded-none" label="Ad · 320x50" />
-          </div>
-        )}
-
-        {/* Checkout Modal */}
-        <CheckoutModal
-          isOpen={showCheckout}
-          onClose={() => setShowCheckout(false)}
-        />
+// Dynamically load ALL content with SSR disabled to avoid pdfjs-dist SSR errors
+const ToolPDFApp = dynamic(() => import('@/components/toolpdf/ToolPDFApp'), {
+  ssr: false,
+  loading: () => (
+    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
+      <div className="flex flex-col items-center gap-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 animate-pulse">
+          <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <p className="text-sm text-slate-500 animate-pulse">Loading ToolPDF...</p>
       </div>
     </div>
-  );
+  ),
+});
+
+export default function Home() {
+  return <ToolPDFApp />;
 }

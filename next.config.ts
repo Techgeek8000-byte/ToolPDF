@@ -5,7 +5,11 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
-  serverExternalPackages: ['pdfjs-dist', 'canvas'],
+  serverExternalPackages: ['pdfjs-dist', 'canvas', 'mammoth', 'docx', 'xlsx'],
+  experimental: {
+    workerThreads: false,
+    cpus: 1,
+  },
 };
 
 export default nextConfig;

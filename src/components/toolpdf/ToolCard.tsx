@@ -1,9 +1,10 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon, Crown } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { COMING_SOON_TOOLS } from '@/lib/pdf-tools';
+import { ToolTier } from '@/lib/tool-definitions';
 
 export interface ToolDef {
   id: string;
@@ -13,6 +14,8 @@ export interface ToolDef {
   gradient: string;
   iconBg: string;
   category: string;
+  tier?: ToolTier;
+  isNew?: boolean;
 }
 
 interface ToolCardProps {
@@ -21,11 +24,22 @@ interface ToolCardProps {
 }
 
 export default function ToolCard({ tool, index }: ToolCardProps) {
-  const { setView, setActiveTool, resetTool } = useAppStore();
+  const { setView, setActiveTool, resetTool, isPremium } = useAppStore();
   const isComingSoon = COMING_SOON_TOOLS.includes(tool.id);
+  const isPremiumTool = tool.tier === 'premium';
+  const isNewTool = tool.isNew;
   const Icon = tool.icon;
 
   const handleClick = () => {
+    // If premium tool and user is not premium, show checkout modal instead
+    if (isPremiumTool && !isPremium) {
+      // Instead of blocking, we'll let them access it but show a premium wall
+      // when they try to process
+      resetTool();
+      setActiveTool(tool.id);
+      setView('tool');
+      return;
+    }
     resetTool();
     setActiveTool(tool.id);
     setView('tool');
@@ -60,14 +74,30 @@ export default function ToolCard({ tool, index }: ToolCardProps) {
         />
 
         <div className="relative z-10">
-          {/* Icon */}
-          <div
-            className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
-            style={{
-              background: tool.iconBg,
-            }}
-          >
-            <Icon className="h-6 w-6 text-white" />
+          {/* Icon + badges */}
+          <div className="flex items-center gap-2 mb-4">
+            <div
+              className="inline-flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
+              style={{
+                background: tool.iconBg,
+              }}
+            >
+              <Icon className="h-6 w-6 text-white" />
+            </div>
+            {/* Badges */}
+            <div className="flex flex-col gap-1">
+              {isPremiumTool && (
+                <div className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 border border-violet-500/20 px-2 py-0.5">
+                  <Crown className="w-3 h-3 text-violet-400" />
+                  <span className="text-[10px] font-medium text-violet-300 uppercase">Pro</span>
+                </div>
+              )}
+              {isNewTool && (
+                <div className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5">
+                  <span className="text-[10px] font-medium text-emerald-300 uppercase">New</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Name */}

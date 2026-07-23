@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FileText, Search, Sparkles, Crown, ExternalLink, BarChart3 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { motion } from 'framer-motion';
@@ -20,6 +20,8 @@ interface HeaderProps {
 export default function Header({ onUpgradeClick }: HeaderProps) {
   const { searchQuery, setSearchQuery, setPremium, isPremium, currentView, setView, resetTool } = useAppStore();
   const [todayCount, setTodayCount] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setTodayCount(getTodayTotal());
@@ -29,13 +31,31 @@ export default function Header({ onUpgradeClick }: HeaderProps) {
     return () => clearInterval(interval);
   }, []);
 
+  // Keyboard shortcut: Ctrl+K / Cmd+K focuses the search input
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Debounced search handler — 300ms delay before updating the store
   const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    // If user is on a tool page and starts searching, go back to home to show results
-    if (currentView === 'tool' && value.trim().length > 0) {
-      resetTool();
-      setView('home');
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
+    debounceTimerRef.current = setTimeout(() => {
+      setSearchQuery(value);
+      // If user is on a tool page and starts searching, go back to home to show results
+      if (currentView === 'tool' && value.trim().length > 0) {
+        resetTool();
+        setView('home');
+      }
+    }, 300);
   };
 
   const handlePremiumClick = () => {
@@ -84,11 +104,12 @@ export default function Header({ onUpgradeClick }: HeaderProps) {
           <div className="relative hidden sm:block flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
             <input
+              ref={searchInputRef}
               type="text"
-              placeholder="Search tools..."
+              placeholder="Search tools... (Ctrl+K)"
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full rounded-lg bg-white/5 border border-white/10 pl-10 pr-4 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all"
+              className="debounce-search w-full rounded-lg bg-white/5 border border-white/10 pl-10 pr-4 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all"
             />
           </div>
 
@@ -133,10 +154,10 @@ export default function Header({ onUpgradeClick }: HeaderProps) {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
             <input
               type="text"
-              placeholder="Search tools..."
+              placeholder="Search tools... (Ctrl+K)"
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full rounded-lg bg-white/5 border border-white/10 pl-10 pr-4 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-emerald-500/50 transition-all"
+              className="debounce-search w-full rounded-lg bg-white/5 border border-white/10 pl-10 pr-4 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-emerald-500/50 transition-all"
             />
           </div>
         </div>

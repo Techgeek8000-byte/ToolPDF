@@ -43,7 +43,11 @@ export default function Footer() {
             <span className="text-white/20">·</span>
             <a href="/terms" className="hover:text-white transition-colors">Terms of Service</a>
             <span className="text-white/20">·</span>
-            <a href="mailto:support@toolpdf.com" className="hover:text-white transition-colors">Contact</a>
+            <a href="/about" className="hover:text-white transition-colors">About</a>
+            <span className="text-white/20">·</span>
+            <a href="/faq" className="hover:text-white transition-colors">FAQ</a>
+            <span className="text-white/20">·</span>
+            <a href="/contact" className="hover:text-white transition-colors">Contact</a>
           </div>
 
           {/* Tagline */}

@@ -390,3 +390,30 @@
   animation: scanline 4s linear infinite;
   pointer-events: none;
 }
+
+/* ── Performance & interaction utility classes ── */
+
+/* Debounce-search: smooth focus animation for search inputs */
+.debounce-search {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+.debounce-search:focus {
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15), 0 0 12px rgba(6, 182, 212, 0.2);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Tool card hover: subtle lift + glow on hover */
+.tool-card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.tool-card-hover:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow:
+    0 8px 24px rgba(16, 185, 129, 0.15),
+    0 4px 12px rgba(6, 182, 212, 0.1);
+}
+
+/* Page enter: fade-in-up animation for page transitions */
+.page-enter {
+  animation: fade-in-up 0.5s ease-out forwards;
+}

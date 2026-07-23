@@ -15,10 +15,10 @@ const plans = [
     period: '',
     description: 'Get started with PDF tools',
     badge: null,
-    features: ['10 files per day', 'All 10 tools', '100MB max file size', 'Standard processing', 'Watermark on output'],
+    features: ['10 files per day', '19 free tools', '100MB max file size', 'File reader (all types)', 'Standard encryption'],
     cta: 'Current Plan',
     highlighted: false,
-    icon: <Star className="w-5 h-5 text-purple-400" />,
+    icon: <Star className="w-5 h-5 text-emerald-400" />,
   },
   {
     name: 'Weekly',
@@ -26,7 +26,7 @@ const plans = [
     period: '/week',
     description: 'Try Pro for a week',
     badge: null,
-    features: ['Unlimited files', 'All 10 tools', '500MB max file size', 'Priority speed', 'No watermark', 'Batch processing'],
+    features: ['Unlimited files', 'All 27 tools', '500MB max file size', 'Priority speed', 'No watermark', 'Batch processing'],
     cta: 'Get Weekly',
     highlighted: false,
     icon: <Clock className="w-5 h-5 text-purple-400" />,
@@ -38,7 +38,7 @@ const plans = [
     originalPrice: '$4',
     description: 'Most popular for regular users',
     badge: 'SAVE 50%',
-    features: ['Unlimited files', 'All 10 tools', '500MB max file size', 'Priority speed', 'No watermark', 'Batch processing', 'Early access to new tools'],
+    features: ['Unlimited files', 'All 27 tools', '500MB max file size', 'Priority speed', 'No watermark', 'Batch processing', 'Unlock PDF', 'Convert any file to PDF', 'PDF to HTML', 'PDF to Excel', 'Redact PDF', 'Flatten PDF', 'Sign PDF'],
     cta: 'Get Monthly',
     highlighted: true,
     icon: <Zap className="w-5 h-5 text-purple-400" />,
@@ -50,7 +50,7 @@ const plans = [
     originalPrice: '$24',
     description: 'Best value for regular users',
     badge: 'SAVE 50%',
-    features: ['Unlimited files', 'All 10 tools', '500MB max file size', 'Priority speed', 'No watermark', 'Batch processing', 'Early access to new tools', 'Priority support'],
+    features: ['Everything in Monthly', 'Priority support', 'Early access to new tools', 'Save $12/year', 'Remove watermark tool', 'All new tools included'],
     cta: 'Get Yearly',
     highlighted: false,
     icon: <Infinity className="w-5 h-5 text-emerald-400" />,
@@ -80,7 +80,17 @@ export default function PricingSection({ onUpgradeClick }: PricingSectionProps) 
     <section className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-16">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="text-center mb-12">
         <h2 className="text-2xl sm:text-3xl font-bold text-white">Simple, <span className="text-purple-400">Transparent</span> Pricing</h2>
-        <p className="mt-2 text-slate-400">Start free. Upgrade when you need more.</p>
+        <p className="mt-2 text-slate-400">Start free with 19 tools. Upgrade when you need premium features.</p>
+        <div className="mt-4 flex justify-center gap-4 text-sm">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-emerald-400" />
+            <span className="text-slate-400"><span className="text-emerald-400 font-semibold">19</span> free tools</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-violet-400" />
+            <span className="text-slate-400"><span className="text-violet-400 font-semibold">8</span> pro tools</span>
+          </div>
+        </div>
       </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
